@@ -1,0 +1,2 @@
+music_server:
+  address: "localhost:8080"

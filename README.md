@@ -1,1 +1,3 @@
-# together
+# 🌱 TOGETHER
+
+## Description
