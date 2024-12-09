@@ -31,14 +31,14 @@ func New() *Player {
 	// Format of the source. go-mp3's format is signed 16bit integers.
 	options.Format = oto.FormatSignedInt16LE
 
-	otoCtx, readyChan, err := oto.NewContext(options)
+	ctx, readyChan, err := oto.NewContext(options)
 	if err != nil {
 		panic("oto.NewContext failed: " + err.Error())
 	}
 
 	return &Player{
 		player:    &oto.Player{},
-		ctx:       otoCtx,
+		ctx:       ctx,
 		readyChan: readyChan,
 		isPlaying: false,
 	}
