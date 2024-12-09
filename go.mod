@@ -4,6 +4,7 @@ go 1.23.4
 
 require (
 	github.com/ebitengine/oto/v3 v3.3.1
+	github.com/google/uuid v1.6.0
 	github.com/grpc-ecosystem/grpc-gateway/v2 v2.24.0
 	github.com/hajimehoshi/go-mp3 v0.3.4
 	github.com/ilyakaznacheev/cleanenv v1.5.0

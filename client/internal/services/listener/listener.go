@@ -2,9 +2,10 @@ package listener
 
 import (
 	"context"
-	"fmt"
 	"log"
+	"time"
 
+	"github.com/google/uuid"
 	pb "github.com/kuroko-shirai/together/pkg/proto"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
@@ -17,19 +18,16 @@ type Listener struct {
 }
 
 func New(config *Config) (*Listener, error) {
-	fmt.Println(">>>> 1")
 	connection, err := grpc.NewClient(config.Address, grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
 		return nil, err
 	}
 
-	fmt.Println(">>>> 2")
-
 	client := pb.NewPublisherClient(connection)
 	stream, err := client.Subscribe(
 		context.Background(),
 		&pb.SubscribeRequest{
-			ClientId: "client1",
+			ClientId: uuid.New().String(),
 		},
 	)
 	if err != nil {
@@ -48,7 +46,8 @@ func (s *Listener) Run() {
 		msg, err := s.stream.Recv()
 		if err != nil {
 			log.Printf("Error receiving message: %v", err)
-			return
+			time.Sleep(time.Second)
+			continue
 		}
 		log.Printf("Received message: %s", msg.Text)
 	}
