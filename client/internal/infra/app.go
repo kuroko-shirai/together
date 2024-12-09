@@ -3,7 +3,7 @@ package infra
 import (
 	"context"
 
-	"github.com/kuroko-shirai/together/server/internal/services/music_server"
+	"github.com/kuroko-shirai/together/client/internal/services/listener"
 )
 
 type Service interface {
@@ -21,7 +21,7 @@ func New() (*App, error) {
 		return nil, err
 	}
 
-	ms, err := music_server.New(&ca.MusicServer)
+	ms, err := listener.New(&ca.MusicServer)
 	if err != nil {
 		return nil, err
 	}
