@@ -2,7 +2,7 @@ package main
 
 import (
 	"context"
-	"fmt"
+	"log"
 
 	"github.com/kuroko-shirai/together/client/internal/infra"
 )
@@ -10,9 +10,9 @@ import (
 func main() {
 	app, err := infra.New()
 	if err != nil {
-		fmt.Println(err)
+		log.Fatal(err)
 		return
 	}
 
-	app.Run(context.TODO())
+	app.Run(context.Background())
 }

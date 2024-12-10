@@ -36,7 +36,6 @@ func New(config *Config) (*MusicServer, error) {
 
 func (s *MusicServer) Run() {
 	s.server.Serve(s.listener)
-
 }
 
 func (s *MusicServer) Stop() {

@@ -12,6 +12,7 @@ import (
 )
 
 type Listener struct {
+	server     *grpc.Server
 	connection *grpc.ClientConn
 	client     pb.PublisherClient
 	stream     grpc.ServerStreamingClient[pb.Message]
@@ -34,23 +35,38 @@ func New(config *Config) (*Listener, error) {
 		return nil, err
 	}
 
+	go func() {
+		for {
+			resp, err := stream.Recv()
+			if err != nil {
+				continue
+			}
+			log.Printf("Received message: %s", resp)
+		}
+	}()
+
+	time.Sleep(10 * time.Second)
+
 	return &Listener{
 		connection: connection,
 		client:     client,
 		stream:     stream,
+		server:     grpc.NewServer(),
 	}, nil
 }
 
 func (s *Listener) Run() {
-	for {
-		msg, err := s.stream.Recv()
-		if err != nil {
-			log.Printf("Error receiving message: %v", err)
-			time.Sleep(time.Second)
-			continue
-		}
-		log.Printf("Received message: %s", msg.Text)
-	}
+	// for {
+	// 	msg, err := s.stream.RecvMsg()
+	// 	if err != nil {
+	// 		continue
+	// 	}
+	// 	log.Printf("Received message: %s", msg.Text)
+	// }
+	// s.server.Serve(s.listener)
+	// for {
+	// 	s.stream.Recv()
+	// }
 }
 
 func (s *Listener) Stop() {
