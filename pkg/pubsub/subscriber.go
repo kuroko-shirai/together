@@ -12,7 +12,6 @@ import (
 
 type Subscriber struct {
 	connection *grpc.ClientConn
-	client     pb.PublisherClient
 	stream     grpc.ServerStreamingClient[pb.Message]
 }
 
@@ -41,7 +40,6 @@ func NewSubscriber(
 
 	return &Subscriber{
 		connection: connection,
-		client:     client,
 		stream:     stream,
 	}, nil
 }
