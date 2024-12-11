@@ -4,8 +4,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log"
 	"net"
-	"time"
 
 	pb "github.com/kuroko-shirai/together/pkg/proto"
 	"google.golang.org/grpc"
@@ -26,6 +26,8 @@ type Publisher struct {
 	server      *grpc.Server
 	listener    net.Listener
 	subscribers map[string]pb.Publisher_SubscribeServer
+
+	msgChan chan *pb.Message
 }
 
 func NewPublisher(
@@ -42,6 +44,7 @@ func NewPublisher(
 		subscribers: make(map[string]pb.Publisher_SubscribeServer),
 		listener:    listener,
 		server:      server,
+		msgChan:     make(chan *pb.Message),
 	}
 
 	pb.RegisterPublisherServer(server, &p)
@@ -52,7 +55,6 @@ func NewPublisher(
 func (this *Publisher) Run() error {
 	go func() {
 		if err := this.server.Serve(this.listener); err != nil {
-			//	return err
 		}
 	}()
 
@@ -60,13 +62,20 @@ func (this *Publisher) Run() error {
 }
 
 func (this *Publisher) SendMessage(
-	ctx context.Context,
+	_ context.Context,
 	msg *pb.Message,
 ) (*pb.Response, error) {
+	this.msgChan <- msg
+
+	return &pb.Response{
+		Result: _ok,
+	}, nil
+}
+
+func (this *Publisher) publish(msg *pb.Message) error {
 	var eproc error
 
 	for clientID, subscriber := range this.subscribers {
-		subscriber.Context()
 		if err := subscriber.SendMsg(msg); err != nil {
 			eclient := errors.New(
 				fmt.Sprintf(_feclient,
@@ -78,25 +87,24 @@ func (this *Publisher) SendMessage(
 		}
 	}
 
-	if eproc != nil {
-		return &pb.Response{
-			Result: fmt.Sprintf(_ferrors, eproc.Error()),
-		}, eproc
-	}
-
-	return &pb.Response{
-		Result: _ok,
-	}, nil
+	return eproc
 }
 
 func (this *Publisher) Subscribe(
 	req *pb.SubscribeRequest,
 	stream pb.Publisher_SubscribeServer,
 ) error {
+	log.Printf("Добавлен клиент %s", req.ClientId)
 	this.subscribers[req.ClientId] = stream
 
 	for {
-		time.Sleep(time.Second)
+		select {
+		case msg := <-this.msgChan:
+			if err := this.publish(msg); err != nil {
+				log.Printf("Удаляется клиент %s", req.ClientId)
+				delete(this.subscribers, req.ClientId)
+			}
+		}
 	}
 }
 

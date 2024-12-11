@@ -30,8 +30,7 @@ import (
 )
 
 func main() {
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-	defer cancel()
+	ctx := context.Background()
 
 	p, err := pubsub.NewPublisher(":8080")
 	if err != nil {
