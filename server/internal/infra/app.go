@@ -7,8 +7,8 @@ import (
 )
 
 type Service interface {
-	Run()
-	Stop()
+	Run() error
+	Stop() error
 }
 
 type App struct {

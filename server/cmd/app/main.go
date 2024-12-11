@@ -1,6 +1,5 @@
 package main
 
-/*
 import (
 	"context"
 	"log"
@@ -14,36 +13,7 @@ func main() {
 		log.Fatal(err)
 		return
 	}
+	defer app.Stop()
 
 	app.Run(context.Background())
-}
-*/
-
-import (
-	"context"
-	"fmt"
-	"log"
-	"time"
-
-	pb "github.com/kuroko-shirai/together/pkg/proto"
-	"github.com/kuroko-shirai/together/pkg/pubsub"
-)
-
-func main() {
-	ctx := context.Background()
-
-	p, err := pubsub.NewPublisher(":8080")
-	if err != nil {
-		log.Fatal(err)
-	}
-	defer p.Stop()
-
-	if err := p.Run(); err != nil {
-		log.Fatal(err)
-	}
-
-	for i := 0; ; i++ {
-		p.SendMessage(ctx, &pb.Message{Text: fmt.Sprintf("message-%d", i)})
-		time.Sleep(time.Second)
-	}
 }

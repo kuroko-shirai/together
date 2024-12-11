@@ -9,7 +9,7 @@ import (
 	"hash/fnv"
 	"net"
 
-	pb "github.com/kuroko-shirai/together/pkg/proto"
+	pb "github.com/kuroko-shirai/together/pkg/pubsub/proto"
 	cmap "github.com/orcaman/concurrent-map/v2"
 	"google.golang.org/grpc"
 )
@@ -41,8 +41,6 @@ func NewPublisher(
 		return nil, err
 	}
 
-	server := grpc.NewServer()
-
 	p := Publisher{
 		subscribers: cmap.NewWithCustomShardingFunction[string, pb.Publisher_SubscribeServer](func(key string) uint32 {
 			var buf bytes.Buffer
@@ -55,7 +53,7 @@ func NewPublisher(
 			return h.Sum32()
 		}),
 		listener: listener,
-		server:   server,
+		server:   grpc.NewServer(),
 		msgChan:  make(chan *pb.Message),
 	}
 

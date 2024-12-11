@@ -5,7 +5,7 @@ import (
 	"io"
 
 	"github.com/google/uuid"
-	pb "github.com/kuroko-shirai/together/pkg/proto"
+	pb "github.com/kuroko-shirai/together/pkg/pubsub/proto"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 )
