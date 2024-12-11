@@ -1,13 +1,16 @@
 package pubsub
 
 import (
+	"bytes"
 	"context"
+	"encoding/gob"
 	"errors"
 	"fmt"
-	"log"
+	"hash/fnv"
 	"net"
 
 	pb "github.com/kuroko-shirai/together/pkg/proto"
+	cmap "github.com/orcaman/concurrent-map/v2"
 	"google.golang.org/grpc"
 )
 
@@ -25,7 +28,7 @@ type Publisher struct {
 
 	server      *grpc.Server
 	listener    net.Listener
-	subscribers map[string]pb.Publisher_SubscribeServer
+	subscribers cmap.ConcurrentMap[string, pb.Publisher_SubscribeServer]
 
 	msgChan chan *pb.Message
 }
@@ -41,21 +44,29 @@ func NewPublisher(
 	server := grpc.NewServer()
 
 	p := Publisher{
-		subscribers: make(map[string]pb.Publisher_SubscribeServer),
-		listener:    listener,
-		server:      server,
-		msgChan:     make(chan *pb.Message),
+		subscribers: cmap.NewWithCustomShardingFunction[string, pb.Publisher_SubscribeServer](func(key string) uint32 {
+			var buf bytes.Buffer
+			enc := gob.NewEncoder(&buf)
+			if err := enc.Encode(key); err != nil {
+				panic(err)
+			}
+			h := fnv.New32()
+			h.Write(buf.Bytes())
+			return h.Sum32()
+		}),
+		listener: listener,
+		server:   server,
+		msgChan:  make(chan *pb.Message),
 	}
-
-	pb.RegisterPublisherServer(server, &p)
 
 	return &p, nil
 }
 
 func (this *Publisher) Run() error {
 	go func() {
-		if err := this.server.Serve(this.listener); err != nil {
-		}
+		pb.RegisterPublisherServer(this.server, this)
+
+		this.server.Serve(this.listener)
 	}()
 
 	return nil
@@ -75,7 +86,7 @@ func (this *Publisher) SendMessage(
 func (this *Publisher) publish(msg *pb.Message) error {
 	var eproc error
 
-	for clientID, subscriber := range this.subscribers {
+	for clientID, subscriber := range this.subscribers.Items() {
 		if err := subscriber.SendMsg(msg); err != nil {
 			eclient := errors.New(
 				fmt.Sprintf(_feclient,
@@ -94,15 +105,13 @@ func (this *Publisher) Subscribe(
 	req *pb.SubscribeRequest,
 	stream pb.Publisher_SubscribeServer,
 ) error {
-	log.Printf("Добавлен клиент %s", req.ClientId)
-	this.subscribers[req.ClientId] = stream
+	this.subscribers.Set(req.ClientId, stream)
 
 	for {
 		select {
 		case msg := <-this.msgChan:
 			if err := this.publish(msg); err != nil {
-				log.Printf("Удаляется клиент %s", req.ClientId)
-				delete(this.subscribers, req.ClientId)
+				this.subscribers.Remove(req.ClientId)
 			}
 		}
 	}
