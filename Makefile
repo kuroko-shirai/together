@@ -13,10 +13,10 @@ CLIENT_PATH := client/cmd/app
 .PHONY: server
 server:
 	@echo "Server running..."
-	@go run -race $(SERVER_PATH)/main.go
+	@go run $(SERVER_PATH)/main.go
 
 # Run the client
 .PHONY: client
 client:
 	@echo "Client running..."
-	@go run -race $(CLIENT_PATH)/main.go
+	@go run $(CLIENT_PATH)/main.go
