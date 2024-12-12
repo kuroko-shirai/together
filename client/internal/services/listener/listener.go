@@ -13,7 +13,10 @@ type Listener struct {
 }
 
 func New(config *Config) (*Listener, error) {
-	subscriber, err := pubsub.NewSubscriber(context.Background(), config.Address)
+	subscriber, err := pubsub.NewSubscriber(
+		context.Background(),
+		config.Address,
+	)
 	if err != nil {
 		return nil, err
 	}
@@ -26,11 +29,13 @@ func New(config *Config) (*Listener, error) {
 func (this *Listener) Run() error {
 	var eproc error
 	for {
-		if err := this.subscriber.Recv(func(msg *pb.Message) error {
-			fmt.Printf("client received ack: %s\n", msg)
+		if err := this.subscriber.Recv(
+			func(msg *pb.Message) error {
+				fmt.Printf("client received ack: %s\n", msg)
 
-			return nil
-		}); err != nil {
+				return nil
+			},
+		); err != nil {
 			eproc = err
 			break
 		}
