@@ -10,7 +10,8 @@ const (
 
 type Config struct {
 	MusicServer MusicServerConfig `yaml:"music_server"`
-	Listener    ListenerConfig    `yaml:"listener"`
+	Listener    MusicServerConfig `yaml:"listener"`
+	Redis       RedisConfig       `yaml:"redis"`
 }
 
 type MusicServerConfig struct {
@@ -19,6 +20,12 @@ type MusicServerConfig struct {
 
 type ListenerConfig struct {
 	Address string `yaml:"address"`
+}
+
+type RedisConfig struct {
+	Address  string `yaml:"address"`
+	Password string `yaml:"password"`
+	DB       int    `yaml:"db"`
 }
 
 func New() (*Config, error) {

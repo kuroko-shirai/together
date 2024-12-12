@@ -6,33 +6,41 @@ import (
 	"github.com/kuroko-shirai/together/common/config"
 	"github.com/kuroko-shirai/together/pkg/pubsub"
 	pb "github.com/kuroko-shirai/together/pkg/pubsub/proto"
+	"github.com/kuroko-shirai/together/utils"
+	"github.com/redis/go-redis/v9"
 )
 
-// MusicServer - рассылает свой статус всем подписчикам.
-// С другой стороны MusicServer принимает команды от
-// подписчика, изменяет свой статуст и рассылает его всем.
+// MusicServer: receives commands from a subscriber, and
+// broadcasts commands to all subscribers, so that they,
+// after processing the command, perform the corresponding
+// actions with the track.
 type MusicServer struct {
-	publisher  *pubsub.Publisher
-	subscriber *pubsub.Subscriber
+	publisher *pubsub.Publisher
+	storage   *redis.Client
 }
 
 func New(config *config.Config) (*MusicServer, error) {
-	publisher, err := pubsub.NewPublisher(config.MusicServer.Address)
-	if err != nil {
-		return nil, err
-	}
-
-	subscriber, err := pubsub.NewSubscriber(
-		context.Background(),
-		config.Listener.Address,
+	publisher, err := pubsub.NewPublisher(
+		config.MusicServer.Address,
 	)
 	if err != nil {
 		return nil, err
 	}
 
+	storage := redis.NewClient(&redis.Options{
+		Addr:     config.Redis.Address,
+		Password: config.Redis.Password,
+		DB:       config.Redis.DB,
+	})
+	if err := storage.Ping(
+		context.TODO(),
+	).Err(); err != nil {
+		return nil, err
+	}
+
 	return &MusicServer{
-		publisher:  publisher,
-		subscriber: subscriber,
+		publisher: publisher,
+		storage:   storage,
 	}, nil
 }
 
@@ -43,19 +51,23 @@ func (this *MusicServer) Run() error {
 
 	var eproc error
 	for {
-		if err := this.subscriber.Recv(
-			func(msg *pb.Message) error {
-				this.publisher.SendMessage(
-					context.TODO(),
-					msg,
-				)
+		status := this.storage.GetDel(
+			context.TODO(),
+			utils.RedisKeyTrack,
+		)
+		if status.Err() != nil {
+			if status.Err() != redis.Nil {
+				eproc = status.Err()
 
-				return nil
-			},
-		); err != nil {
-			eproc = err
-			break
+				break
+			}
+			continue
 		}
+
+		this.publisher.SendMessage(
+			context.TODO(),
+			&pb.Message{Text: status.String()},
+		)
 	}
 
 	return eproc
