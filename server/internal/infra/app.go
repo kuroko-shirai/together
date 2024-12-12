@@ -3,6 +3,7 @@ package infra
 import (
 	"context"
 
+	"github.com/kuroko-shirai/together/common/config"
 	"github.com/kuroko-shirai/together/server/internal/services/music_server"
 )
 
@@ -16,12 +17,12 @@ type App struct {
 }
 
 func New() (*App, error) {
-	ca, err := configNew()
+	ca, err := config.New()
 	if err != nil {
 		return nil, err
 	}
 
-	ms, err := music_server.New(&ca.MusicServer)
+	ms, err := music_server.New(ca)
 	if err != nil {
 		return nil, err
 	}

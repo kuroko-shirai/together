@@ -2,25 +2,37 @@ package music_server
 
 import (
 	"context"
-	"fmt"
-	"time"
 
+	"github.com/kuroko-shirai/together/common/config"
 	"github.com/kuroko-shirai/together/pkg/pubsub"
 	pb "github.com/kuroko-shirai/together/pkg/pubsub/proto"
 )
 
+// MusicServer - рассылает свой статус всем подписчикам.
+// С другой стороны MusicServer принимает команды от
+// подписчика, изменяет свой статуст и рассылает его всем.
 type MusicServer struct {
-	publisher pubsub.Publisher
+	publisher  *pubsub.Publisher
+	subscriber *pubsub.Subscriber
 }
 
-func New(config *Config) (*MusicServer, error) {
-	publisher, err := pubsub.NewPublisher(config.Address)
+func New(config *config.Config) (*MusicServer, error) {
+	publisher, err := pubsub.NewPublisher(config.MusicServer.Address)
+	if err != nil {
+		return nil, err
+	}
+
+	subscriber, err := pubsub.NewSubscriber(
+		context.Background(),
+		config.Listener.Address,
+	)
 	if err != nil {
 		return nil, err
 	}
 
 	return &MusicServer{
-		publisher: *publisher,
+		publisher:  publisher,
+		subscriber: subscriber,
 	}, nil
 }
 
@@ -29,13 +41,24 @@ func (this *MusicServer) Run() error {
 		return err
 	}
 
-	ctx := context.Background()
-	for i := 0; i <= 60; i++ {
-		this.publisher.SendMessage(ctx, &pb.Message{Text: fmt.Sprintf("message-%d", i)})
-		time.Sleep(time.Second)
+	var eproc error
+	for {
+		if err := this.subscriber.Recv(
+			func(msg *pb.Message) error {
+				this.publisher.SendMessage(
+					context.TODO(),
+					msg,
+				)
+
+				return nil
+			},
+		); err != nil {
+			eproc = err
+			break
+		}
 	}
 
-	return nil
+	return eproc
 }
 
 func (this *MusicServer) Stop() error {

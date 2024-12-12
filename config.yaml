@@ -1,2 +1,4 @@
 music_server:
   address: "localhost:8080"
+listener:
+  address: "localhost:8081"
