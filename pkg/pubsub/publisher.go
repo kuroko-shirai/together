@@ -10,6 +10,7 @@ import (
 	"net"
 
 	pb "github.com/kuroko-shirai/together/pkg/pubsub/proto"
+	"github.com/kuroko-shirai/together/utils"
 	cmap "github.com/orcaman/concurrent-map/v2"
 	"google.golang.org/grpc"
 )
@@ -19,8 +20,6 @@ const (
 
 	_feclient = "[%s] %s"
 	_ferrors  = "error: %s"
-
-	_tcp = "tcp"
 )
 
 type Publisher struct {
@@ -36,7 +35,7 @@ type Publisher struct {
 func NewPublisher(
 	address string,
 ) (*Publisher, error) {
-	listener, err := net.Listen(_tcp, address)
+	listener, err := net.Listen(utils.TCP, address)
 	if err != nil {
 		return nil, err
 	}

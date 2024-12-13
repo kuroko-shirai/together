@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/kuroko-shirai/together/client/internal/services/listener"
+	"github.com/kuroko-shirai/together/common/config"
 )
 
 type Service interface {
@@ -16,12 +17,12 @@ type App struct {
 }
 
 func New() (*App, error) {
-	ca, err := configNew()
+	ca, err := config.New()
 	if err != nil {
 		return nil, err
 	}
 
-	ms, err := listener.New(&ca.MusicServer)
+	ms, err := listener.New(ca)
 	if err != nil {
 		return nil, err
 	}

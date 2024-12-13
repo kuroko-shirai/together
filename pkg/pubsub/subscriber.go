@@ -11,6 +11,7 @@ import (
 )
 
 type Subscriber struct {
+	id         string
 	connection *grpc.ClientConn
 	stream     grpc.ServerStreamingClient[pb.Message]
 }
@@ -27,11 +28,12 @@ func NewSubscriber(
 		return nil, err
 	}
 
+	id := uuid.New().String()
 	client := pb.NewPublisherClient(connection)
 	stream, err := client.Subscribe(
 		ctx,
 		&pb.SubscribeRequest{
-			ClientId: uuid.New().String(),
+			ClientId: id,
 		},
 	)
 	if err != nil {
@@ -39,6 +41,7 @@ func NewSubscriber(
 	}
 
 	return &Subscriber{
+		id:         id,
 		connection: connection,
 		stream:     stream,
 	}, nil
@@ -65,4 +68,8 @@ func (this *Subscriber) Stop() error {
 	}
 
 	return this.connection.Close()
+}
+
+func (this *Subscriber) GetID() string {
+	return this.id
 }

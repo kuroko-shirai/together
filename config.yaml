@@ -1,2 +1,9 @@
 music_server:
   address: "localhost:8080"
+listener:
+  address: "localhost:8082"
+redis:
+  address: "localhost:6379"
+  password: ""
+  db: 0
+  ttl: "10s"
