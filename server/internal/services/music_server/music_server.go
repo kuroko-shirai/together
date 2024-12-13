@@ -19,21 +19,26 @@ type MusicServer struct {
 	storage   *redis.Client
 }
 
-func New(config *config.Config) (*MusicServer, error) {
+func New(
+	ctx context.Context,
+	cfg *config.Config,
+) (*MusicServer, error) {
 	publisher, err := pubsub.NewPublisher(
-		config.MusicServer.Address,
+		cfg.MusicServer.Address,
 	)
 	if err != nil {
 		return nil, err
 	}
 
-	storage := redis.NewClient(&redis.Options{
-		Addr:     config.Redis.Address,
-		Password: config.Redis.Password,
-		DB:       config.Redis.DB,
-	})
+	storage := redis.NewClient(
+		&redis.Options{
+			Addr:     cfg.Redis.Address,
+			Password: cfg.Redis.Password,
+			DB:       cfg.Redis.DB,
+		},
+	)
 	if err := storage.Ping(
-		context.TODO(),
+		ctx,
 	).Err(); err != nil {
 		return nil, err
 	}
@@ -44,15 +49,17 @@ func New(config *config.Config) (*MusicServer, error) {
 	}, nil
 }
 
-func (this *MusicServer) Run() error {
-	if err := this.publisher.Run(); err != nil {
+func (this *MusicServer) Run(
+	ctx context.Context,
+) error {
+	if err := this.publisher.Run(ctx); err != nil {
 		return err
 	}
 
 	var eproc error
 	for {
 		status := this.storage.GetDel(
-			context.TODO(),
+			ctx,
 			utils.RedisKeyTrack,
 		)
 		if status.Err() != nil {
@@ -65,16 +72,18 @@ func (this *MusicServer) Run() error {
 		}
 
 		this.publisher.SendMessage(
-			context.TODO(),
-			&pb.Message{Text: status.String()},
+			ctx,
+			&pb.Message{
+				Text: status.String(),
+			},
 		)
 	}
 
 	return eproc
 }
 
-func (this *MusicServer) Stop() error {
-	this.publisher.Stop()
+func (this *MusicServer) Stop(ctx context.Context) error {
+	this.publisher.Stop(ctx)
 
 	return nil
 }

@@ -8,21 +8,21 @@ import (
 )
 
 type Service interface {
-	Run() error
-	Stop() error
+	Run(context.Context) error
+	Stop(context.Context) error
 }
 
 type App struct {
 	Services []Service
 }
 
-func New() (*App, error) {
-	ca, err := config.New()
+func New(ctx context.Context) (*App, error) {
+	cfg, err := config.New()
 	if err != nil {
 		return nil, err
 	}
 
-	ms, err := listener.New(ca)
+	ms, err := listener.New(ctx, cfg)
 	if err != nil {
 		return nil, err
 	}
@@ -34,14 +34,14 @@ func New() (*App, error) {
 	}, nil
 }
 
-func (a *App) Run(cxt context.Context) {
+func (a *App) Run(ctx context.Context) {
 	for _, s := range a.Services {
-		s.Run()
+		s.Run(ctx)
 	}
 }
 
-func (a *App) Stop() {
+func (a *App) Stop(cxt context.Context) {
 	for _, s := range a.Services {
-		s.Stop()
+		s.Stop(cxt)
 	}
 }

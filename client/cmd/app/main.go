@@ -8,12 +8,14 @@ import (
 )
 
 func main() {
-	app, err := infra.New()
+	ctx := context.Background()
+
+	app, err := infra.New(ctx)
 	if err != nil {
 		log.Fatal(err)
 		return
 	}
-	defer app.Stop()
+	defer app.Stop(ctx)
 
-	app.Run(context.Background())
+	app.Run(ctx)
 }

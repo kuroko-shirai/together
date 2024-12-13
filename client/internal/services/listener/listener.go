@@ -28,32 +28,33 @@ type Listener struct {
 	listener   *net.Listener
 }
 
-func New(config *config.Config) (*Listener, error) {
+func New(
+	ctx context.Context,
+	cfg *config.Config,
+) (*Listener, error) {
 	subscriber, err := pubsub.NewSubscriber(
 		context.Background(),
-		config.MusicServer.Address,
+		cfg.MusicServer.Address,
 	)
 	if err != nil {
 		return nil, err
 	}
 
 	storage := redis.NewClient(&redis.Options{
-		Addr:     config.Redis.Address,
-		Password: config.Redis.Password,
-		DB:       config.Redis.DB,
+		Addr:     cfg.Redis.Address,
+		Password: cfg.Redis.Password,
+		DB:       cfg.Redis.DB,
 	})
-	if err := storage.Ping(context.TODO()).Err(); err != nil {
+	if err := storage.Ping(ctx).Err(); err != nil {
 		return nil, err
 	}
 
-	listener, err := net.Listen(
-		utils.TCP,
-		config.Listener.Address,
-	)
+	listener, err := cfg.GetAvailableListener()
 	if err != nil {
 		return nil, err
 	}
 
+	log.Println("Client started on", listener.Addr())
 	return &Listener{
 		subscriber: *subscriber,
 		storage:    storage,
@@ -61,7 +62,7 @@ func New(config *config.Config) (*Listener, error) {
 	}, nil
 }
 
-func (this *Listener) Run() error {
+func (this *Listener) Run(context.Context) error {
 	var eproc error
 
 	go func() {
@@ -94,7 +95,7 @@ func (this *Listener) Run() error {
 	return eproc
 }
 
-func (this *Listener) Stop() error {
+func (this *Listener) Stop(context.Context) error {
 	return this.subscriber.Stop()
 }
 

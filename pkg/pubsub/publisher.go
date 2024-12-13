@@ -59,7 +59,7 @@ func NewPublisher(
 	return &p, nil
 }
 
-func (this *Publisher) Run() error {
+func (this *Publisher) Run(context.Context) error {
 	go func() {
 		pb.RegisterPublisherServer(this.server, this)
 
@@ -114,6 +114,6 @@ func (this *Publisher) Subscribe(
 	}
 }
 
-func (this *Publisher) Stop() {
+func (this *Publisher) Stop(context.Context) {
 	this.server.Stop()
 }

@@ -1,7 +1,12 @@
 music_server:
   address: "localhost:8080"
-listener:
-  address: "localhost:8082"
+listeners:
+  [
+    { address: "localhost:8084" },
+    { address: "localhost:8083" },
+    { address: "localhost:8084" },
+    { address: "localhost:8085" },
+  ]
 redis:
   address: "localhost:6379"
   password: ""

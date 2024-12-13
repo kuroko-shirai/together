@@ -1,7 +1,10 @@
 package config
 
 import (
+	"net"
+
 	"github.com/ilyakaznacheev/cleanenv"
+	"github.com/kuroko-shirai/together/utils"
 )
 
 const (
@@ -10,7 +13,7 @@ const (
 
 type Config struct {
 	MusicServer MusicServerConfig `yaml:"music_server"`
-	Listener    MusicServerConfig `yaml:"listener"`
+	Listeners   []ListenerConfig  `yaml:"listeners"`
 	Redis       RedisConfig       `yaml:"redis"`
 }
 
@@ -36,4 +39,23 @@ func New() (*Config, error) {
 	}
 
 	return &ca, nil
+}
+
+func (this *Config) GetAvailableListener() (
+	listener net.Listener,
+	err error,
+) {
+	for _, cfgListener := range this.Listeners {
+		listener, err = net.Listen(
+			utils.TCP,
+			cfgListener.Address,
+		)
+		if err != nil {
+			continue
+		} else {
+			break
+		}
+	}
+
+	return listener, err
 }
