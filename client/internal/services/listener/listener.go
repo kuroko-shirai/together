@@ -62,7 +62,7 @@ func New(
 	}, nil
 }
 
-func (this *Listener) Run(context.Context) error {
+func (this *Listener) Run(ctx context.Context) error {
 	var eproc error
 
 	go func() {
@@ -83,6 +83,7 @@ func (this *Listener) Run(context.Context) error {
 				// received command and perform one of the
 				// actions with the music track:
 				// play/pause/next/prev
+				//
 
 				return nil
 			},
@@ -108,14 +109,19 @@ func (this *Listener) SendMessage(
 	ctx context.Context,
 	msg *pb.Message,
 ) (*pb.Response, error) {
-	status := this.storage.Set(ctx, utils.RedisKeyTrack, msg.GetText(), 10*time.Second)
+	status := this.storage.Set(
+		ctx,
+		utils.RedisKeyTrack, // stable key in the redis
+		msg.GetText(),       // send message from user
+		10*time.Second,      // record's ttl
+	)
 	if status.Err() != nil {
 		return &pb.Response{
-			Result: "error",
+			Result: utils.StatusError,
 		}, status.Err()
 	}
 
 	return &pb.Response{
-		Result: "ok",
+		Result: utils.StatusOK,
 	}, nil
 }
