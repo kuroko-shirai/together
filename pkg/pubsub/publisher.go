@@ -75,6 +75,10 @@ func (this *Publisher) SendMessage(
 ) (*pb.Response, error) {
 	this.msgChan <- msg
 
+	// TODO: Здесь будет искаться трек и если он отсутствует
+	// в плейлисте, то ответ будет NOTFOUND.
+	// Если же трек находится в плейлисте, то рассылается
+	// его имя и статус OK.
 	return &pb.Response{
 		Result: _ok,
 	}, nil

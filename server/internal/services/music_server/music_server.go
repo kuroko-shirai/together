@@ -2,12 +2,15 @@ package music_server
 
 import (
 	"context"
+	"fmt"
+	"log"
 
 	"github.com/kuroko-shirai/together/common/config"
 	"github.com/kuroko-shirai/together/pkg/pubsub"
 	pb "github.com/kuroko-shirai/together/pkg/pubsub/proto"
 	"github.com/kuroko-shirai/together/utils"
 	"github.com/redis/go-redis/v9"
+	"google.golang.org/protobuf/encoding/protojson"
 )
 
 // MusicServer: receives commands from a subscriber, and
@@ -43,6 +46,8 @@ func New(
 		return nil, err
 	}
 
+	log.Println("Server started on", cfg.MusicServer.Address)
+
 	return &MusicServer{
 		publisher: publisher,
 		storage:   storage,
@@ -58,30 +63,32 @@ func (this *MusicServer) Run(
 
 	var eproc error
 	for {
-		status := this.storage.GetDel(
+		gem := this.storage.GetDel(
 			ctx,
 			utils.RedisKeyTrack,
 		)
-		if status.Err() != nil {
-			if status.Err() != redis.Nil {
-				eproc = status.Err()
+		if gem.Err() != nil {
+			if gem.Err() != redis.Nil {
+				eproc = gem.Err()
 
 				break
 			}
 			continue
 		}
 
-		cmd, err := status.Uint64()
-		if err != nil {
+		fmt.Println(">> gem.Val():", gem.Val())
+		msg := &pb.Message{}
+		if err := protojson.Unmarshal([]byte(gem.Val()), msg); err != nil {
 			eproc = err
-			continue
+
+			break
 		}
+
+		fmt.Println(">> msg:", msg)
 
 		this.publisher.SendMessage(
 			ctx,
-			&pb.Message{
-				Command: cmd,
-			},
+			msg,
 		)
 	}
 

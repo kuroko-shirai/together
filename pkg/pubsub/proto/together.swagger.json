@@ -23,9 +23,12 @@
         "command": {
           "type": "string",
           "format": "uint64"
+        },
+        "track": {
+          "type": "string"
         }
       },
-      "title": "Message - contains command from user to server.\nPlay  - 0\nStop  - 1\nPause - 2\nNext  - 3\nPrev  - 4"
+      "title": "Message - contains a command from the user to the server.\nPlay  - 0\nStop  - 1\nPause - 2\nNext  - 3\nPrev  - 4"
     },
     "protoResponse": {
       "type": "object",
@@ -33,7 +36,8 @@
         "result": {
           "type": "string"
         }
-      }
+      },
+      "description": "Response - contains a information about track."
     },
     "protobufAny": {
       "type": "object",

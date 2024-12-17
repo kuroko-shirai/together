@@ -2,7 +2,7 @@ music_server:
   address: "localhost:8080"
 listeners:
   [
-    { address: "localhost:8084" },
+    { address: "localhost:8082" },
     { address: "localhost:8083" },
     { address: "localhost:8084" },
     { address: "localhost:8085" },

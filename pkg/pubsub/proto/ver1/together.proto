@@ -1,0 +1,29 @@
+syntax = "proto3";
+
+package proto;
+
+option go_package = "/api";
+
+service Publisher {
+  rpc SendMessage(Message) returns (Response) {}
+  rpc Subscribe(SubscribeRequest) returns (stream Message) {}
+}
+
+// Message - contains a command from the user to the server.
+// Play  - 0
+// Stop  - 1
+// Pause - 2
+// Next  - 3
+// Prev  - 4
+message Message {
+    uint64 command = 1;
+}
+
+// Response - contains a information about track.
+message Response {
+    string result = 1;
+}
+
+message SubscribeRequest {
+    string client_id = 1;
+}
