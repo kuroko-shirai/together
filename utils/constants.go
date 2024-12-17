@@ -8,3 +8,11 @@ const (
 	StatusOK    = "ok"
 	StatusError = "error"
 )
+
+const (
+	CmdPlay = iota
+	CmdStop
+	CmdPause
+	CmdNext
+	CmdPrev
+)

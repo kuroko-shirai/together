@@ -71,10 +71,16 @@ func (this *MusicServer) Run(
 			continue
 		}
 
+		cmd, err := status.Uint64()
+		if err != nil {
+			eproc = err
+			continue
+		}
+
 		this.publisher.SendMessage(
 			ctx,
 			&pb.Message{
-				Text: status.String(),
+				Command: cmd,
 			},
 		)
 	}

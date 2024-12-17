@@ -2,18 +2,25 @@ package listener
 
 import (
 	"context"
-	"fmt"
+	"errors"
 	"log"
 	"net"
+	"sync"
 	"time"
 
 	"github.com/kuroko-shirai/together/common/config"
+	"github.com/kuroko-shirai/together/pkg/player"
 	"github.com/kuroko-shirai/together/pkg/pubsub"
 	pb "github.com/kuroko-shirai/together/pkg/pubsub/proto"
 	"github.com/kuroko-shirai/together/utils"
 	redis "github.com/redis/go-redis/v9"
 	"google.golang.org/grpc"
 )
+
+type State struct {
+	CurrentTrack string `json:"current_track"`
+	IsPlaying    bool   `json:"is_playing"`
+}
 
 // Listener: The listener subscribes to message broadcasts
 // from the server, which allows multiple subscribers to
@@ -26,6 +33,11 @@ type Listener struct {
 	subscriber pubsub.Subscriber
 	storage    *redis.Client
 	listener   *net.Listener
+
+	state  State
+	player player.Player
+
+	mu sync.Mutex
 }
 
 func New(
@@ -59,6 +71,9 @@ func New(
 		subscriber: *subscriber,
 		storage:    storage,
 		listener:   &listener,
+
+		player: *player.New(),
+		mu:     sync.Mutex{},
 	}, nil
 }
 
@@ -78,12 +93,34 @@ func (this *Listener) Run(ctx context.Context) error {
 	for {
 		if err := this.subscriber.Recv(
 			func(msg *pb.Message) error {
-				fmt.Printf("client received ack: %s\n", msg)
 				// TODO: Here we need to process the
 				// received command and perform one of the
 				// actions with the music track:
 				// play/pause/next/prev
 				//
+
+				switch msg.GetCommand() {
+				case utils.CmdPlay:
+					this.mu.Lock()
+					this.state.IsPlaying = true
+					go this.player.Play("./playlist/track-001.mp3")
+					this.mu.Unlock()
+				case utils.CmdStop:
+					panic(errors.New("error!!"))
+				case utils.CmdPause:
+					this.mu.Lock()
+					this.state.IsPlaying = false
+					go this.player.Pause()
+					this.mu.Unlock()
+				case utils.CmdNext:
+					this.mu.Lock()
+					this.state.CurrentTrack = "Трек 1"
+					this.mu.Unlock()
+				case utils.CmdPrev:
+					this.mu.Lock()
+					this.state.CurrentTrack = "Трек 2"
+					this.mu.Unlock()
+				}
 
 				return nil
 			},
@@ -112,7 +149,7 @@ func (this *Listener) SendMessage(
 	status := this.storage.Set(
 		ctx,
 		utils.RedisKeyTrack, // stable key in the redis
-		msg.GetText(),       // send message from user
+		msg.GetCommand(),    // send message from user
 		10*time.Second,      // record's ttl
 	)
 	if status.Err() != nil {
