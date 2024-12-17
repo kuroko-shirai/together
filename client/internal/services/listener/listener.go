@@ -8,14 +8,13 @@ import (
 	"time"
 
 	"github.com/kuroko-shirai/task"
-	redis "github.com/redis/go-redis/v9"
-	"google.golang.org/grpc"
-
 	"github.com/kuroko-shirai/together/common/config"
 	"github.com/kuroko-shirai/together/pkg/player"
 	"github.com/kuroko-shirai/together/pkg/pubsub"
 	pb "github.com/kuroko-shirai/together/pkg/pubsub/proto"
 	"github.com/kuroko-shirai/together/utils"
+	redis "github.com/redis/go-redis/v9"
+	"google.golang.org/grpc"
 )
 
 // Listener The listener subscribes to message broadcasts
@@ -89,7 +88,7 @@ func (this *Listener) Run(ctx context.Context) error {
 				// Here we need to process the received
 				// command and perform one of the actions
 				// with the music track:
-				// play/stop/pause/next/prev
+				// play/pause/next/prev
 
 				g := task.WithRecover(
 					func(p any, args ...any) {
@@ -100,7 +99,7 @@ func (this *Listener) Run(ctx context.Context) error {
 				g.Do(
 					func() func() error {
 						return func() error {
-							this.process(msg.GetCommand(), msg.GetTrack())
+							this.process(msg)
 
 							return nil
 						}
@@ -120,11 +119,6 @@ func (this *Listener) Run(ctx context.Context) error {
 
 func (this *Listener) Stop(context.Context) error {
 	return this.subscriber.Stop()
-}
-
-type Message struct {
-	ID      string
-	Message string
 }
 
 func (this *Listener) SendMessage(
@@ -148,12 +142,11 @@ func (this *Listener) SendMessage(
 	}, nil
 }
 
-func (this *Listener) process(cmd uint64, track string) {
-	switch cmd {
+func (this *Listener) process(msg *pb.Message) {
+	switch msg.GetCommand() {
 	case utils.CmdPlay:
 		if !this.player.IsPlaying() {
-			fmt.Println(">> track:", track)
-			this.player.Play(utils.DirPlaylist + track)
+			this.player.Play(utils.DirPlaylists + msg.GetTrack())
 		}
 	case utils.CmdPause:
 		if this.player.IsPlaying() {

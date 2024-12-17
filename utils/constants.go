@@ -9,7 +9,7 @@ const (
 	StatusOK    = "ok"
 	StatusError = "error"
 
-	DirPlaylist = "./playlist/"
+	DirPlaylists = "./playlists/"
 )
 
 const (
