@@ -2,27 +2,23 @@ package listener
 
 import (
 	"context"
-	"errors"
+	"fmt"
 	"log"
 	"net"
-	"sync"
 	"time"
+
+	"github.com/kuroko-shirai/task"
+	redis "github.com/redis/go-redis/v9"
+	"google.golang.org/grpc"
 
 	"github.com/kuroko-shirai/together/common/config"
 	"github.com/kuroko-shirai/together/pkg/player"
 	"github.com/kuroko-shirai/together/pkg/pubsub"
 	pb "github.com/kuroko-shirai/together/pkg/pubsub/proto"
 	"github.com/kuroko-shirai/together/utils"
-	redis "github.com/redis/go-redis/v9"
-	"google.golang.org/grpc"
 )
 
-type State struct {
-	CurrentTrack string `json:"current_track"`
-	IsPlaying    bool   `json:"is_playing"`
-}
-
-// Listener: The listener subscribes to message broadcasts
+// Listener The listener subscribes to message broadcasts
 // from the server, which allows multiple subscribers to
 // receive up-to-date synchronous updates of the server
 // status. On the other hand, the listener can send a
@@ -34,10 +30,7 @@ type Listener struct {
 	storage    *redis.Client
 	listener   *net.Listener
 
-	state  State
 	player player.Player
-
-	mu sync.Mutex
 }
 
 func New(
@@ -67,13 +60,13 @@ func New(
 	}
 
 	log.Println("Client started on", listener.Addr())
+
 	return &Listener{
 		subscriber: *subscriber,
 		storage:    storage,
 		listener:   &listener,
 
 		player: *player.New(),
-		mu:     sync.Mutex{},
 	}, nil
 }
 
@@ -93,36 +86,28 @@ func (this *Listener) Run(ctx context.Context) error {
 	for {
 		if err := this.subscriber.Recv(
 			func(msg *pb.Message) error {
-				// TODO: Here we need to process the
-				// received command and perform one of the
-				// actions with the music track:
-				// play/pause/next/prev
-				//
+				// Here we need to process the received
+				// command and perform one of the actions
+				// with the music track:
+				// play/stop/pause/next/prev
 
-				switch msg.GetCommand() {
-				case utils.CmdPlay:
-					this.mu.Lock()
-					this.state.IsPlaying = true
-					go this.player.Play("./playlist/track-001.mp3")
-					this.mu.Unlock()
-				case utils.CmdStop:
-					panic(errors.New("error!!"))
-				case utils.CmdPause:
-					this.mu.Lock()
-					this.state.IsPlaying = false
-					go this.player.Pause()
-					this.mu.Unlock()
-				case utils.CmdNext:
-					this.mu.Lock()
-					this.state.CurrentTrack = "Трек 1"
-					this.mu.Unlock()
-				case utils.CmdPrev:
-					this.mu.Lock()
-					this.state.CurrentTrack = "Трек 2"
-					this.mu.Unlock()
-				}
+				g := task.WithRecover(
+					func(p any, args ...any) {
+						log.Println("panic while processing command from server:", p)
+					},
+				)
 
-				return nil
+				g.Do(
+					func() func() error {
+						return func() error {
+							this.process(msg.GetCommand(), msg.GetTrack())
+
+							return nil
+						}
+					}(),
+				)
+
+				return g.Wait()
 			},
 		); err != nil {
 			eproc = err
@@ -149,8 +134,8 @@ func (this *Listener) SendMessage(
 	status := this.storage.Set(
 		ctx,
 		utils.RedisKeyTrack, // stable key in the redis
-		msg.GetCommand(),    // send message from user
-		10*time.Second,      // record's ttl
+		fmt.Sprintf(utils.MaskKeyTrack, msg.GetCommand(), msg.GetTrack()), // send message from user
+		10*time.Second, // record's ttl
 	)
 	if status.Err() != nil {
 		return &pb.Response{
@@ -161,4 +146,22 @@ func (this *Listener) SendMessage(
 	return &pb.Response{
 		Result: utils.StatusOK,
 	}, nil
+}
+
+func (this *Listener) process(cmd uint64, track string) {
+	switch cmd {
+	case utils.CmdPlay:
+		if !this.player.IsPlaying() {
+			fmt.Println(">> track:", track)
+			this.player.Play(utils.DirPlaylist + track)
+		}
+	case utils.CmdPause:
+		if this.player.IsPlaying() {
+			this.player.Pause()
+		}
+	case utils.CmdNext:
+		// this.state.CurrentTrack = "Трек 1"
+	case utils.CmdPrev:
+		// this.state.CurrentTrack = "Трек 2"
+	}
 }

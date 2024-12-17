@@ -9,7 +9,7 @@ service Publisher {
   rpc Subscribe(SubscribeRequest) returns (stream Message) {}
 }
 
-// Message - contains command from user to server.
+// Message - contains a command from the user to the server.
 // Play  - 0
 // Stop  - 1
 // Pause - 2
@@ -17,12 +17,14 @@ service Publisher {
 // Prev  - 4
 message Message {
     uint64 command = 1;
+    string track = 2;
 }
 
+// Response - contains a information about track.
 message Response {
-  string result = 1;
+    string result = 1;
 }
 
 message SubscribeRequest {
-  string client_id = 1;
+    string client_id = 1;
 }

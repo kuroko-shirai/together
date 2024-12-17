@@ -50,7 +50,7 @@ func (p *Player) Play(filepaths ...string) {
 
 		fileBytes, err := os.ReadFile(filepath)
 		if err != nil {
-			panic("reading my-file.mp3 failed: " + err.Error())
+			panic("reading " + filepath + " failed: " + err.Error())
 		}
 
 		// Convert the pure bytes into a reader object that can be used with the mp3 decoder
