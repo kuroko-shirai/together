@@ -2,19 +2,22 @@ package listener
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log"
 	"net"
 	"time"
 
 	"github.com/kuroko-shirai/task"
-	"github.com/kuroko-shirai/together/common/config"
-	"github.com/kuroko-shirai/together/pkg/player"
-	"github.com/kuroko-shirai/together/pkg/pubsub"
-	pb "github.com/kuroko-shirai/together/pkg/pubsub/proto"
-	"github.com/kuroko-shirai/together/utils"
 	redis "github.com/redis/go-redis/v9"
 	"google.golang.org/grpc"
+
+	"github.com/kuroko-shirai/together/common/config"
+	"github.com/kuroko-shirai/together/pkg/gramophone"
+	"github.com/kuroko-shirai/together/pkg/grpc/player"
+	pbplayer "github.com/kuroko-shirai/together/pkg/grpc/player/proto"
+	pbpubsub "github.com/kuroko-shirai/together/pkg/grpc/pubsub/proto"
+	"github.com/kuroko-shirai/together/utils"
 )
 
 // Listener The listener subscribes to message broadcasts
@@ -23,20 +26,20 @@ import (
 // status. On the other hand, the listener can send a
 // command to the server to update its status.
 type Listener struct {
-	pb.UnimplementedPublisherServer
+	pbplayer.UnimplementedPlayerServer
 
-	subscriber pubsub.Subscriber
+	subscriber player.Subscriber
 	storage    *redis.Client
 	listener   *net.Listener
 
-	player player.Player
+	gramophone gramophone.Gramophone
 }
 
 func New(
 	ctx context.Context,
 	cfg *config.Config,
 ) (*Listener, error) {
-	subscriber, err := pubsub.NewSubscriber(
+	subscriber, err := player.NewSubscriber(
 		context.Background(),
 		cfg.MusicServer.Address,
 	)
@@ -65,7 +68,7 @@ func New(
 		storage:    storage,
 		listener:   &listener,
 
-		player: *player.New(),
+		gramophone: *gramophone.New(),
 	}, nil
 }
 
@@ -75,7 +78,7 @@ func (this *Listener) Run(ctx context.Context) error {
 	go func() {
 		server := grpc.NewServer()
 
-		pb.RegisterPublisherServer(server, this)
+		pbplayer.RegisterPlayerServer(server, this)
 
 		if err := server.Serve(*this.listener); err != nil {
 			log.Fatalf("failed to serve: %v", err)
@@ -84,7 +87,7 @@ func (this *Listener) Run(ctx context.Context) error {
 
 	for {
 		if err := this.subscriber.Recv(
-			func(msg *pb.Message) error {
+			func(msg *pbpubsub.Message) error {
 				// Here we need to process the received
 				// command and perform one of the actions
 				// with the music track:
@@ -99,7 +102,30 @@ func (this *Listener) Run(ctx context.Context) error {
 				g.Do(
 					func() func() error {
 						return func() error {
-							this.process(msg)
+							switch msg.GetCommand() {
+							case utils.CmdPlay:
+								if !this.gramophone.IsPlaying() {
+									if msg.GetTrack().GetAlbum() == "" {
+										return errors.New("invalid album")
+									}
+
+									if msg.GetTrack().GetAlbum() == "" {
+										return errors.New("invalid track")
+									}
+
+									this.gramophone.Play(
+										fmt.Sprintf(
+											utils.DirPlaylists,
+											msg.GetTrack().GetAlbum(),
+											msg.GetTrack().GetTitle(),
+										),
+									)
+								}
+							case utils.CmdStop:
+								if this.gramophone.IsPlaying() {
+									this.gramophone.Pause()
+								}
+							}
 
 							return nil
 						}
@@ -110,51 +136,79 @@ func (this *Listener) Run(ctx context.Context) error {
 			},
 		); err != nil {
 			eproc = err
+
 			break
 		}
+	}
+
+	if eproc != nil {
+		log.Printf("panic while processing command from server: %v", eproc)
 	}
 
 	return eproc
 }
 
-func (this *Listener) Stop(context.Context) error {
-	return this.subscriber.Stop()
+func (this *Listener) Down(context.Context) error {
+	return this.subscriber.Down()
 }
 
-func (this *Listener) SendMessage(
+func (this *Listener) Play(
 	ctx context.Context,
-	msg *pb.Message,
-) (*pb.Response, error) {
+	msg *pbplayer.PlayRequest,
+) (*pbplayer.PlayResponse, error) {
 	status := this.storage.Set(
 		ctx,
 		utils.RedisKeyTrack, // stable key in the redis
-		fmt.Sprintf(utils.MaskKeyTrack, msg.GetCommand(), msg.GetTrack()), // send message from user
+		fmt.Sprintf(
+			utils.MaskKeyRun,
+			utils.CmdPlay,
+			msg.GetAlbum(),
+			msg.GetTitle(),
+		), // send message from user
 		10*time.Second, // record's ttl
 	)
 	if status.Err() != nil {
-		return &pb.Response{
+		return &pbplayer.PlayResponse{
 			Result: utils.StatusError,
 		}, status.Err()
 	}
 
-	return &pb.Response{
+	return &pbplayer.PlayResponse{
 		Result: utils.StatusOK,
 	}, nil
 }
 
-func (this *Listener) process(msg *pb.Message) {
-	switch msg.GetCommand() {
-	case utils.CmdPlay:
-		if !this.player.IsPlaying() {
-			this.player.Play(utils.DirPlaylists + msg.GetTrack())
-		}
-	case utils.CmdPause:
-		if this.player.IsPlaying() {
-			this.player.Pause()
-		}
-	case utils.CmdNext:
-		// this.state.CurrentTrack = "Трек 1"
-	case utils.CmdPrev:
-		// this.state.CurrentTrack = "Трек 2"
+func (this *Listener) Stop(
+	ctx context.Context,
+	msg *pbplayer.StopRequest,
+) (*pbplayer.StopResponse, error) {
+	status := this.storage.Set(
+		ctx,
+		utils.RedisKeyTrack, // stable key in the redis
+		fmt.Sprintf(
+			utils.MaskKeyStop,
+			utils.CmdStop,
+		), // send message from user
+		10*time.Second, // record's ttl
+	)
+	if status.Err() != nil {
+		fmt.Println(status.Err())
+		return &pbplayer.StopResponse{
+			Result: utils.StatusError,
+		}, status.Err()
 	}
+
+	return &pbplayer.StopResponse{
+		Result: utils.StatusOK,
+	}, nil
+}
+
+func (this *Listener) GetListOfAlbumTracks(
+	ctx context.Context,
+	msg *pbplayer.GetListOfAlbumTracksRequest,
+) (*pbplayer.GetListOfAlbumTracksResponse, error) {
+
+	return &pbplayer.GetListOfAlbumTracksResponse{
+		Result: utils.StatusOK,
+	}, nil
 }

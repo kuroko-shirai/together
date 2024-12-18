@@ -2,12 +2,11 @@ package music_server
 
 import (
 	"context"
-	"fmt"
 	"log"
 
 	"github.com/kuroko-shirai/together/common/config"
-	"github.com/kuroko-shirai/together/pkg/pubsub"
-	pb "github.com/kuroko-shirai/together/pkg/pubsub/proto"
+	"github.com/kuroko-shirai/together/pkg/grpc/pubsub"
+	pb "github.com/kuroko-shirai/together/pkg/grpc/pubsub/proto"
 	"github.com/kuroko-shirai/together/utils"
 	"github.com/redis/go-redis/v9"
 	"google.golang.org/protobuf/encoding/protojson"
@@ -61,7 +60,6 @@ func (this *MusicServer) Run(
 		return err
 	}
 
-	var eproc error
 	for {
 		gem := this.storage.GetDel(
 			ctx,
@@ -69,34 +67,25 @@ func (this *MusicServer) Run(
 		)
 		if gem.Err() != nil {
 			if gem.Err() != redis.Nil {
-				eproc = gem.Err()
-
-				break
+				log.Printf("error: %v", gem.Err())
 			}
+
 			continue
 		}
 
-		fmt.Println(">> gem.Val():", gem.Val())
 		msg := &pb.Message{}
 		if err := protojson.Unmarshal([]byte(gem.Val()), msg); err != nil {
-			eproc = err
+			log.Printf("error: %v", err)
 
-			break
+			continue
 		}
 
-		fmt.Println(">> msg:", msg)
-
-		this.publisher.SendMessage(
-			ctx,
-			msg,
-		)
+		this.publisher.SendMessage(ctx, msg)
 	}
-
-	return eproc
 }
 
-func (this *MusicServer) Stop(ctx context.Context) error {
-	this.publisher.Stop(ctx)
+func (this *MusicServer) Down(ctx context.Context) error {
+	this.publisher.Down(ctx)
 
 	return nil
 }

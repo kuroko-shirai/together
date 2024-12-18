@@ -9,7 +9,7 @@ import (
 
 type Service interface {
 	Run(context.Context) error
-	Stop(context.Context) error
+	Down(context.Context) error
 }
 
 type App struct {
@@ -40,8 +40,8 @@ func (a *App) Run(cxt context.Context) {
 	}
 }
 
-func (a *App) Stop(cxt context.Context) {
+func (a *App) Down(cxt context.Context) {
 	for _, s := range a.Services {
-		s.Stop(cxt)
+		s.Down(cxt)
 	}
 }
