@@ -4,17 +4,19 @@ const (
 	TCP = "tcp"
 
 	RedisKeyTrack = "track"
-	MaskKeyTrack  = `{"command":%d,"track":"%s"}`
+
+	MaskKeyRun  = `{"command":%d,"track":{"album":"%s","title":"%s"}}`
+	MaskKeyStop = `{"command":%d}`
 
 	StatusOK    = "ok"
 	StatusError = "error"
 
-	DirPlaylists = "./playlists/"
+	DirPlaylists = "./playlists/%s/%s"
 )
 
 const (
 	CmdPlay = iota + 1
-	CmdPause
+	CmdStop
 	CmdNext
 	CmdPrev
 )

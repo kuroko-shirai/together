@@ -1,0 +1,99 @@
+syntax = "proto3";
+
+package proto;
+
+option go_package = "/api";
+
+service Player {
+    rpc Play(PlayRequest) returns (PlayResponse) {}
+    // rpc Pause(PauseRequest) returns (PauseResponse) {}
+    rpc Stop(StopRequest) returns (StopResponse) {}
+    // rpc Prev(PrevRequest) returns (PrevResponse) {}
+    // rpc Next(NextRequest) returns (NextResponse) {}
+    // rpc UploadTrack(UploadTrackRequest) returns (UploadTrackResponse) {}
+    // rpc RemoveTrack(RemoveTrackRequest) returns (RemoveTrackResponse) {}
+    // rpc CreateAlbum(CreateAlbumRequest) returns (CreateAlbumResponse) {}
+    // rpc RemoveAlbum(RemoveAlbumRequest) returns (RemoveAlbumResponse) {}
+    // rpc GetListOfAlbums(GetListOfAlbumsRequest) returns (GetListOfAlbumsResponse) {}
+    rpc GetListOfAlbumTracks(GetListOfAlbumTracksRequest) returns (GetListOfAlbumTracksResponse) {}
+}
+
+message PlayRequest {
+    string album = 1 [json_name = "album"]; // Album title
+    string title = 2 [json_name = "title"]; // Track title
+}
+
+message PlayResponse {
+    string result = 1 [json_name = "result"];
+}
+
+message PauseRequest {
+}
+
+message PauseResponse {
+    string result = 1 [json_name = "result"];
+}
+
+message StopRequest {
+}
+
+message StopResponse {
+    string result = 1 [json_name = "result"];
+}
+
+message PrevRequest {
+}
+
+message PrevResponse {
+    string result = 1 [json_name = "result"];
+}
+
+message NextRequest {
+}
+
+message NextResponse {
+    string result = 1 [json_name = "result"];
+}
+
+message UploadTrackRequest {
+}
+
+message UploadTrackResponse {
+    string result = 1 [json_name = "result"];
+}
+
+message RemoveTrackRequest {
+}
+
+message RemoveTrackResponse {
+    string result = 1 [json_name = "result"];
+}
+
+message CreateAlbumRequest {
+}
+
+message CreateAlbumResponse {
+    string result = 1 [json_name = "result"];
+}
+
+message RemoveAlbumRequest {
+}
+
+message RemoveAlbumResponse {
+    string result = 1 [json_name = "result"];
+}
+
+message GetListOfAlbumsRequest {
+}
+
+message GetListOfAlbumsResponse {
+    string result = 1 [json_name = "result"];
+}
+
+message GetListOfAlbumTracksRequest {
+    string album = 1 [json_name = "album"];
+}
+
+message GetListOfAlbumTracksResponse {
+    string result = 1 [json_name = "result"];
+}

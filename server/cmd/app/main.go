@@ -15,7 +15,7 @@ func main() {
 		log.Fatal(err)
 		return
 	}
-	defer app.Stop(ctx)
+	defer app.Down(ctx)
 
 	app.Run(ctx)
 }

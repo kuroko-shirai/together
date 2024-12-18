@@ -1,0 +1,37 @@
+syntax = "proto3";
+
+package proto;
+
+option go_package = "/api";
+
+service Publisher {
+  rpc SendMessage(Message) returns (Response) {}
+  rpc Subscribe(SubscribeRequest) returns (stream Message) {}
+}
+
+// Message - contains a command from the user to the server.
+// List of possible states of command identifiers:
+// Play     - 1
+// Pause    - 2
+// Next     - 3
+// Previous - 4
+// Also Message contains information about track (title,
+// album, etc).
+message Message {
+    uint64 command = 1 [json_name = "command"]; // Command identificator
+    Track track = 2 [json_name = "track"]; // Track information
+}
+
+message Track {
+    string album = 1 [json_name = "album"]; // Album title
+    string title = 2 [json_name = "title"]; // Track title
+}
+
+// Response - contains a information about track.
+message Response {
+    string result = 1 [json_name = "result"];
+}
+
+message SubscribeRequest {
+    string client_id = 1 [json_name = "client_id"];
+}

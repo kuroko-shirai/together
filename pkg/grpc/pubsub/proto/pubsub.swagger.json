@@ -1,0 +1,86 @@
+{
+  "swagger": "2.0",
+  "info": {
+    "title": "pubsub.proto",
+    "version": "version not set"
+  },
+  "tags": [
+    {
+      "name": "Publisher"
+    }
+  ],
+  "consumes": [
+    "application/json"
+  ],
+  "produces": [
+    "application/json"
+  ],
+  "paths": {},
+  "definitions": {
+    "protoMessage": {
+      "type": "object",
+      "properties": {
+        "command": {
+          "type": "string",
+          "format": "uint64",
+          "title": "Command identificator"
+        },
+        "track": {
+          "$ref": "#/definitions/protoTrack",
+          "title": "Track information"
+        }
+      },
+      "description": "Message - contains a command from the user to the server.\nList of possible states of command identifiers:\nPlay     - 1\nPause    - 2\nNext     - 3\nPrevious - 4\nAlso Message contains information about track (title,\nalbum, etc)."
+    },
+    "protoResponse": {
+      "type": "object",
+      "properties": {
+        "result": {
+          "type": "string"
+        }
+      },
+      "description": "Response - contains a information about track."
+    },
+    "protoTrack": {
+      "type": "object",
+      "properties": {
+        "album": {
+          "type": "string",
+          "title": "Album title"
+        },
+        "title": {
+          "type": "string",
+          "title": "Track title"
+        }
+      }
+    },
+    "protobufAny": {
+      "type": "object",
+      "properties": {
+        "@type": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": {}
+    },
+    "rpcStatus": {
+      "type": "object",
+      "properties": {
+        "code": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "message": {
+          "type": "string"
+        },
+        "details": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/protobufAny"
+          }
+        }
+      }
+    }
+  }
+}
