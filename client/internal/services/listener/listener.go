@@ -136,13 +136,10 @@ func (this *Listener) Run(ctx context.Context) error {
 			},
 		); err != nil {
 			eproc = err
+			log.Printf("error while processing command from server: %v", eproc)
 
 			break
 		}
-	}
-
-	if eproc != nil {
-		log.Printf("panic while processing command from server: %v", eproc)
 	}
 
 	return eproc
