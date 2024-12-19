@@ -21,6 +21,7 @@ const _ = grpc.SupportPackageIsVersion9
 const (
 	Player_Play_FullMethodName                 = "/proto.Player/Play"
 	Player_Stop_FullMethodName                 = "/proto.Player/Stop"
+	Player_GetListOfAlbums_FullMethodName      = "/proto.Player/GetListOfAlbums"
 	Player_GetListOfAlbumTracks_FullMethodName = "/proto.Player/GetListOfAlbumTracks"
 )
 
@@ -37,7 +38,7 @@ type PlayerClient interface {
 	// rpc RemoveTrack(RemoveTrackRequest) returns (RemoveTrackResponse) {}
 	// rpc CreateAlbum(CreateAlbumRequest) returns (CreateAlbumResponse) {}
 	// rpc RemoveAlbum(RemoveAlbumRequest) returns (RemoveAlbumResponse) {}
-	// rpc GetListOfAlbums(GetListOfAlbumsRequest) returns (GetListOfAlbumsResponse) {}
+	GetListOfAlbums(ctx context.Context, in *GetListOfAlbumsRequest, opts ...grpc.CallOption) (*GetListOfAlbumsResponse, error)
 	GetListOfAlbumTracks(ctx context.Context, in *GetListOfAlbumTracksRequest, opts ...grpc.CallOption) (*GetListOfAlbumTracksResponse, error)
 }
 
@@ -69,6 +70,16 @@ func (c *playerClient) Stop(ctx context.Context, in *StopRequest, opts ...grpc.C
 	return out, nil
 }
 
+func (c *playerClient) GetListOfAlbums(ctx context.Context, in *GetListOfAlbumsRequest, opts ...grpc.CallOption) (*GetListOfAlbumsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(GetListOfAlbumsResponse)
+	err := c.cc.Invoke(ctx, Player_GetListOfAlbums_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *playerClient) GetListOfAlbumTracks(ctx context.Context, in *GetListOfAlbumTracksRequest, opts ...grpc.CallOption) (*GetListOfAlbumTracksResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(GetListOfAlbumTracksResponse)
@@ -92,7 +103,7 @@ type PlayerServer interface {
 	// rpc RemoveTrack(RemoveTrackRequest) returns (RemoveTrackResponse) {}
 	// rpc CreateAlbum(CreateAlbumRequest) returns (CreateAlbumResponse) {}
 	// rpc RemoveAlbum(RemoveAlbumRequest) returns (RemoveAlbumResponse) {}
-	// rpc GetListOfAlbums(GetListOfAlbumsRequest) returns (GetListOfAlbumsResponse) {}
+	GetListOfAlbums(context.Context, *GetListOfAlbumsRequest) (*GetListOfAlbumsResponse, error)
 	GetListOfAlbumTracks(context.Context, *GetListOfAlbumTracksRequest) (*GetListOfAlbumTracksResponse, error)
 	mustEmbedUnimplementedPlayerServer()
 }
@@ -109,6 +120,9 @@ func (UnimplementedPlayerServer) Play(context.Context, *PlayRequest) (*PlayRespo
 }
 func (UnimplementedPlayerServer) Stop(context.Context, *StopRequest) (*StopResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Stop not implemented")
+}
+func (UnimplementedPlayerServer) GetListOfAlbums(context.Context, *GetListOfAlbumsRequest) (*GetListOfAlbumsResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetListOfAlbums not implemented")
 }
 func (UnimplementedPlayerServer) GetListOfAlbumTracks(context.Context, *GetListOfAlbumTracksRequest) (*GetListOfAlbumTracksResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetListOfAlbumTracks not implemented")
@@ -170,6 +184,24 @@ func _Player_Stop_Handler(srv interface{}, ctx context.Context, dec func(interfa
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Player_GetListOfAlbums_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetListOfAlbumsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(PlayerServer).GetListOfAlbums(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Player_GetListOfAlbums_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(PlayerServer).GetListOfAlbums(ctx, req.(*GetListOfAlbumsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _Player_GetListOfAlbumTracks_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(GetListOfAlbumTracksRequest)
 	if err := dec(in); err != nil {
@@ -202,6 +234,10 @@ var Player_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "Stop",
 			Handler:    _Player_Stop_Handler,
+		},
+		{
+			MethodName: "GetListOfAlbums",
+			Handler:    _Player_GetListOfAlbums_Handler,
 		},
 		{
 			MethodName: "GetListOfAlbumTracks",

@@ -14,7 +14,7 @@ service Player {
     // rpc RemoveTrack(RemoveTrackRequest) returns (RemoveTrackResponse) {}
     // rpc CreateAlbum(CreateAlbumRequest) returns (CreateAlbumResponse) {}
     // rpc RemoveAlbum(RemoveAlbumRequest) returns (RemoveAlbumResponse) {}
-    // rpc GetListOfAlbums(GetListOfAlbumsRequest) returns (GetListOfAlbumsResponse) {}
+    rpc GetListOfAlbums(GetListOfAlbumsRequest) returns (GetListOfAlbumsResponse) {}
     rpc GetListOfAlbumTracks(GetListOfAlbumTracksRequest) returns (GetListOfAlbumTracksResponse) {}
 }
 
@@ -87,7 +87,7 @@ message GetListOfAlbumsRequest {
 }
 
 message GetListOfAlbumsResponse {
-    string result = 1 [json_name = "result"];
+    repeated string albums = 1 [json_name = "albums"];
 }
 
 message GetListOfAlbumTracksRequest {
@@ -95,5 +95,5 @@ message GetListOfAlbumTracksRequest {
 }
 
 message GetListOfAlbumTracksResponse {
-    string result = 1 [json_name = "result"];
+    repeated string tracks = 1 [json_name = "tracks"];
 }

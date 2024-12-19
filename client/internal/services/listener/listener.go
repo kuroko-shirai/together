@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log"
 	"net"
+	"os"
 	"time"
 
 	"github.com/kuroko-shirai/task"
@@ -95,39 +96,14 @@ func (this *Listener) Run(ctx context.Context) error {
 
 				g := task.WithRecover(
 					func(p any, args ...any) {
-						log.Println("panic while processing command from server:", p)
+						log.Println("got a panic while processing command from server:", p)
 					},
 				)
 
 				g.Do(
 					func() func() error {
 						return func() error {
-							switch msg.GetCommand() {
-							case utils.CmdPlay:
-								if !this.gramophone.IsPlaying() {
-									if msg.GetTrack().GetAlbum() == "" {
-										return errors.New("invalid album")
-									}
-
-									if msg.GetTrack().GetAlbum() == "" {
-										return errors.New("invalid track")
-									}
-
-									this.gramophone.Play(
-										fmt.Sprintf(
-											utils.DirPlaylists,
-											msg.GetTrack().GetAlbum(),
-											msg.GetTrack().GetTitle(),
-										),
-									)
-								}
-							case utils.CmdStop:
-								if this.gramophone.IsPlaying() {
-									this.gramophone.Pause()
-								}
-							}
-
-							return nil
+							return this.process(msg)
 						}
 					}(),
 				)
@@ -136,13 +112,10 @@ func (this *Listener) Run(ctx context.Context) error {
 			},
 		); err != nil {
 			eproc = err
+			log.Printf("got an error while processing command from server: %v", eproc)
 
 			break
 		}
-	}
-
-	if eproc != nil {
-		log.Printf("panic while processing command from server: %v", eproc)
 	}
 
 	return eproc
@@ -203,12 +176,69 @@ func (this *Listener) Stop(
 	}, nil
 }
 
+func (this *Listener) GetListOfAlbums(
+	ctx context.Context,
+	msg *pbplayer.GetListOfAlbumsRequest,
+) (*pbplayer.GetListOfAlbumsResponse, error) {
+	files, err := os.ReadDir(utils.DirPlaylists)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	albums := make([]string, 0, len(files))
+	for _, file := range files {
+		albums = append(albums, file.Name())
+	}
+
+	return &pbplayer.GetListOfAlbumsResponse{
+		Albums: albums,
+	}, nil
+}
+
 func (this *Listener) GetListOfAlbumTracks(
 	ctx context.Context,
 	msg *pbplayer.GetListOfAlbumTracksRequest,
 ) (*pbplayer.GetListOfAlbumTracksResponse, error) {
+	files, err := os.ReadDir(fmt.Sprintf(utils.DirPlaylistsAlbum, msg.GetAlbum()))
+	if err != nil {
+		return &pbplayer.GetListOfAlbumTracksResponse{
+			Tracks: []string{},
+		}, nil
+	}
+
+	tracks := make([]string, 0, len(files))
+	for _, file := range files {
+		tracks = append(tracks, file.Name())
+	}
 
 	return &pbplayer.GetListOfAlbumTracksResponse{
-		Result: utils.StatusOK,
+		Tracks: tracks,
 	}, nil
+}
+
+func (this *Listener) process(msg *pbpubsub.Message) error {
+	switch msg.GetCommand() {
+	case utils.CmdPlay:
+		if msg.GetTrack().GetAlbum() == "" {
+			return errors.New("invalid album")
+		}
+
+		if msg.GetTrack().GetAlbum() == "" {
+			return errors.New("invalid track")
+		}
+
+		this.gramophone.Play(
+			fmt.Sprintf(
+				utils.DirPlaylistsAlbumTrack,
+				msg.GetTrack().GetAlbum(),
+				msg.GetTrack().GetTitle(),
+			),
+		)
+	case utils.CmdStop:
+		if this.gramophone.IsPlaying() {
+			this.gramophone.Pause()
+		}
+	}
+
+	return nil
 }

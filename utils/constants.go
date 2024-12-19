@@ -11,7 +11,9 @@ const (
 	StatusOK    = "ok"
 	StatusError = "error"
 
-	DirPlaylists = "./playlists/%s/%s"
+	DirPlaylists           = "./playlists/"
+	DirPlaylistsAlbum      = "./playlists/%s"
+	DirPlaylistsAlbumTrack = "./playlists/%s/%s"
 )
 
 const (

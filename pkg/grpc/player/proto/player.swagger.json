@@ -20,8 +20,22 @@
     "protoGetListOfAlbumTracksResponse": {
       "type": "object",
       "properties": {
-        "result": {
-          "type": "string"
+        "tracks": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "protoGetListOfAlbumsResponse": {
+      "type": "object",
+      "properties": {
+        "albums": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
         }
       }
     },
