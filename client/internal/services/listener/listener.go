@@ -10,15 +10,14 @@ import (
 	"time"
 
 	"github.com/kuroko-shirai/task"
-	redis "github.com/redis/go-redis/v9"
-	"google.golang.org/grpc"
-
 	"github.com/kuroko-shirai/together/common/config"
 	"github.com/kuroko-shirai/together/pkg/gramophone"
 	"github.com/kuroko-shirai/together/pkg/grpc/player"
 	pbplayer "github.com/kuroko-shirai/together/pkg/grpc/player/proto"
 	pbpubsub "github.com/kuroko-shirai/together/pkg/grpc/pubsub/proto"
 	"github.com/kuroko-shirai/together/utils"
+	redis "github.com/redis/go-redis/v9"
+	"google.golang.org/grpc"
 )
 
 // Listener The listener subscribes to message broadcasts
@@ -73,30 +72,15 @@ func New(
 	}, nil
 }
 
-func (this *Listener) Run(ctx context.Context) error {
-	var eproc error
-
-	go func() {
-		server := grpc.NewServer()
-
-		pbplayer.RegisterPlayerServer(server, this)
-
-		if err := server.Serve(*this.listener); err != nil {
-			log.Fatalf("failed to serve: %v", err)
-		}
-	}()
+func (this *Listener) Run(ctx context.Context) (err error) {
+	this.start()
 
 	for {
-		if err := this.subscriber.Recv(
+		if err = this.subscriber.Recv(
 			func(msg *pbpubsub.Message) error {
-				// Here we need to process the received
-				// command and perform one of the actions
-				// with the music track:
-				// play/pause/next/prev
-
 				g := task.WithRecover(
 					func(p any, args ...any) {
-						log.Println("got a panic while processing command from server:", p)
+						log.Println("got a panic while processing command from music-server:", p)
 					},
 				)
 
@@ -111,14 +95,13 @@ func (this *Listener) Run(ctx context.Context) error {
 				return g.Wait()
 			},
 		); err != nil {
-			eproc = err
-			log.Printf("got an error while processing command from server: %v", eproc)
+			log.Printf("got an error while processing command from music-server: %v", err)
 
 			break
 		}
 	}
 
-	return eproc
+	return err
 }
 
 func (this *Listener) Down(context.Context) error {
@@ -199,7 +182,12 @@ func (this *Listener) GetListOfAlbumTracks(
 	ctx context.Context,
 	msg *pbplayer.GetListOfAlbumTracksRequest,
 ) (*pbplayer.GetListOfAlbumTracksResponse, error) {
-	files, err := os.ReadDir(fmt.Sprintf(utils.DirPlaylistsAlbum, msg.GetAlbum()))
+	files, err := os.ReadDir(
+		fmt.Sprintf(
+			utils.DirPlaylistsAlbum,
+			msg.GetAlbum(),
+		),
+	)
 	if err != nil {
 		return &pbplayer.GetListOfAlbumTracksResponse{
 			Tracks: []string{},
@@ -214,6 +202,19 @@ func (this *Listener) GetListOfAlbumTracks(
 	return &pbplayer.GetListOfAlbumTracksResponse{
 		Tracks: tracks,
 	}, nil
+}
+
+// start registering and starting grpc server.
+func (this *Listener) start() {
+	go func() {
+		server := grpc.NewServer()
+
+		pbplayer.RegisterPlayerServer(server, this)
+
+		if err := server.Serve(*this.listener); err != nil {
+			log.Fatalf("failed to start grpc server: %v", err)
+		}
+	}()
 }
 
 func (this *Listener) process(msg *pbpubsub.Message) error {
